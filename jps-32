@@ -178,7 +178,7 @@ install_package() {
             exit 1
         fi
     elif [ -f "$pkg_path/$pkg" ]; then
-        echo -e "${C_BLUE}:: Ikili dosya /usr/local/bin/ altına kopyalanıyor...${C_RESET}"
+        echo -e "${C_BLUE}:: İkili dosya /usr/local/bin/ altına kopyalanıyor...${C_RESET}"
         sudo cp -v "$pkg_path/$pkg" /usr/local/bin/
         sudo chmod +x "/usr/local/bin/$pkg"
         echo -e "${C_GREEN}${C_BOLD}[BAŞARILI] $pkg başarıyla /usr/local/bin altına kuruldu!${C_RESET}"
@@ -207,7 +207,7 @@ show_help() {
     echo -e "${C_CYAN}${C_BOLD}      JPS-32 (Jubatus OS Package System)   ${C_RESET}"
     echo -e "${C_CYAN}${C_BOLD}        Xyronix Studios - Eren Mut        ${C_RESET}"
     echo -e "${C_CYAN}${C_BOLD}==========================================${C_RESET}"
-    echo "Kullanım: jps-32 <komut> veya jps <komut>"
+    echo "Kullanım: jps-32 <komut>"
     echo ""
     echo "Komutlar:"
     echo "  update            - Depoyu senkronize eder ve güncelleme sorar"
