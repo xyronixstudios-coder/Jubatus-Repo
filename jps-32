@@ -10,7 +10,19 @@ sync_repo() {
         sudo git clone "$REPO_URL" "$INSTALL_DIR"
     else
         echo "[JPS-32] Depo güncelleniyor..."
-        sudo git -C "$INSTALL_DIR" pull origin main
+        sudo git -C "$INSTALL_DIR" config pull.rebase false
+        sudo git -C "$INSTALL_DIR" fetch origin main
+        sudo git -C "$INSTALL_DIR" reset --hard origin/main
+    fi
+
+    # Kendi kendini güncelleme mekanizması (Eski ISO'lardaki jps-32'yi otomatik günceller)
+    if [ -f "$INSTALL_DIR/jps-32" ]; then
+        local current_exec
+        current_exec=$(readlink -f "$0" 2>/dev/null || echo "$0")
+        if [ -w "$current_exec" ] || [ "$EUID" -eq 0 ]; then
+            sudo cp "$INSTALL_DIR/jps-32" "$current_exec" 2>/dev/null
+            sudo chmod +x "$current_exec" 2>/dev/null
+        fi
     fi
 }
 
@@ -28,7 +40,7 @@ show_help() {
     echo "Kullanım: jps-32 <komut> [argüman]"
     echo ""
     echo "Komutlar:"
-    echo "  update            - Depoyu sunucuyla senkronize eder"
+    echo "  update            - Depoyu ve JPS paket yöneticisini günceller"
     echo "  upgrade           - Sistem paketlerini günceller"
     echo "  install <paket>   - Paket kurar"
     echo "  remove <paket>    - Paketi sistemden kaldırır"
@@ -46,15 +58,59 @@ show_info() {
     echo "=========================================="
 }
 
+install_package() {
+    local pkg="$1"
+    sync_repo
+
+    local pkg_path="$INSTALL_DIR/32-bit/$pkg"
+
+    if [ ! -d "$pkg_path" ]; then
+        echo "Hata: '$pkg' paketi 32-bit deposunda bulunamadı!"
+        exit 1
+    fi
+
+    echo "[JPS-32] $pkg paketi yükleniyor..."
+
+    if [ -f "$pkg_path/install.sh" ]; then
+        cd "$pkg_path" || exit 1
+        sudo bash "$pkg_path/install.sh"
+        echo "[BAŞARILI] $pkg paketi başarıyla kuruldu!"
+    elif [ -f "$pkg_path/$pkg" ]; then
+        sudo cp "$pkg_path/$pkg" /usr/local/bin/
+        sudo chmod +x "/usr/local/bin/$pkg"
+        echo "[BAŞARILI] $pkg başarıyla /usr/local/bin altına kuruldu!"
+    else
+        echo "Hata: $pkg klasöründe kurulabilir dosya veya install.sh bulunamadı."
+        exit 1
+    fi
+}
+
+remove_package() {
+    local pkg="$1"
+    if [ -f "/usr/local/bin/$pkg" ]; then
+        sudo rm -f "/usr/local/bin/$pkg"
+        echo "[BAŞARILI] $pkg sistemden kaldırıldı."
+    elif [ -f "/usr/bin/$pkg" ]; then
+        sudo rm -f "/usr/bin/$pkg"
+        echo "[BAŞARILI] $pkg sistemden kaldırıldı."
+    else
+        echo "Uyarı: $pkg çalıştırılabilir dosyası standart dizinlerde bulunamadı."
+    fi
+}
+
 submit_project() {
-    local school_name="$1"
+    local raw_school_name="$1"
     local project_path="$2"
 
-    if [ -z "$school_name" ] || [ -z "$project_path" ]; then
+    if [ -z "$raw_school_name" ] || [ -z "$project_path" ]; then
         echo "Hata: Okul adını ve proje yolunu belirtmelisin!"
         echo "Kullanım: jps-32 submit <okul_adi> <proje_yolu>"
         exit 1
     fi
+
+    # Okul adındaki boşlukları '-' (tire) karakteri ile değiştir
+    local school_name
+    school_name=$(echo "$raw_school_name" | tr ' ' '-')
 
     if [ ! -e "$project_path" ]; then
         echo "Hata: Belirtilen proje yolu bulunamadı: $project_path"
@@ -73,8 +129,7 @@ submit_project() {
     echo "[JPS-32] Git değişiklikleri hazırlanıyor ve gönderiliyor..."
     cd "$INSTALL_DIR" || exit 1
     sudo git add student-projects/"$school_name"
-    
-    # Değişiklik yoksa hata vermemesi için kontrol
+
     if sudo git diff --staged --quiet; then
         echo "[JPS-32] Gönderilecek yeni bir değişiklik bulunamadı (zaten güncel)."
         return 0
@@ -82,32 +137,31 @@ submit_project() {
 
     sudo git commit -m "Otomatik Proje Gönderimi: $school_name"
     sudo git push origin main
-    echo "[BAŞARILI] Proje resmi havuza başarıyla gönderildi!"
+    echo "[BAŞARILI] Proje resmi havuza ($school_name) başarıyla gönderildi!"
 }
 
 case "$1" in
     update)
         sync_repo
-        echo "[JPS-32] Depo başarıyla güncellendi!"
+        echo "[JPS-32] Depo ve JPS paket yöneticisi başarıyla güncellendi!"
         ;;
     upgrade)
         sync_repo
         echo "[JPS-32] Tüm sistem güncel."
         ;;
     install)
-        if [ -z "$2" ]; then
+        if [ -z "$2" ]; me
             echo "Hata: Kurulacak paket adını belirtmelisin!"
             exit 1
         fi
-        sync_repo
-        echo "[JPS-32] $2 paketi yükleniyor..."
+        install_package "$2"
         ;;
     remove)
         if [ -z "$2" ]; then
             echo "Hata: Kaldırılacak paket adını belirtmelisin!"
             exit 1
         fi
-        echo "[JPS-32] $2 paketi kaldırılıyor..."
+        remove_package "$2"
         ;;
     submit)
         submit_project "$2" "$3"
