@@ -78,8 +78,14 @@ list_schools() {
     echo -e "${C_CYAN}${C_BOLD}  Mevcut Kayıtlı Okul Klasörleri (JPS-64) ${C_RESET}"
     echo -e "${C_CYAN}${C_BOLD}==========================================${C_RESET}"
     
-    if [ -d "$INSTALL_DIR/student-projects" ]; then
-        schools=$(ls -1 "$INSTALL_DIR/student-projects" 2>/dev/null)
+    # student-project dizinini kontrol et
+    PROJECT_DIR="$INSTALL_DIR/student-project"
+    if [ ! -d "$PROJECT_DIR" ]; then
+        PROJECT_DIR="$INSTALL_DIR/student-projects"
+    fi
+
+    if [ -d "$PROJECT_DIR" ]; then
+        schools=$(ls -1 "$PROJECT_DIR" 2>/dev/null | grep -v '^\.')
         if [ -z "$schools" ]; then
             echo -e "${C_YELLOW}Henüz hiç proje gönderilmiş okul bulunmuyor.${C_RESET}"
         else
@@ -138,7 +144,7 @@ submit_project() {
     sync_repo_silent
     configure_git "$INSTALL_DIR"
 
-    target_dir="$INSTALL_DIR/student-projects/$school_formatted"
+    target_dir="$INSTALL_DIR/student-project/$school_formatted"
     sudo mkdir -p "$target_dir"
 
     echo -e "${C_CYAN}[JPS-64] Proje dosyaları kopyalanıyor...${C_RESET}"
@@ -146,7 +152,7 @@ submit_project() {
 
     echo -e "${C_CYAN}[JPS-64] Sunucuya pushlanıyor...${C_RESET}"
     cd "$INSTALL_DIR" || exit 1
-    sudo git add student-projects/"$school_formatted"
+    sudo git add student-project/"$school_formatted"
 
     if sudo git diff --staged --quiet; then
         echo -e "${C_YELLOW}:: Bu proje zaten sunucuda en güncel haliyle mevcut.${C_RESET}"
