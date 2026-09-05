@@ -72,33 +72,6 @@ check_and_update() {
     fi
 }
 
-list_schools() {
-    sync_repo_silent
-    echo -e "${C_CYAN}${C_BOLD}==========================================${C_RESET}"
-    echo -e "${C_CYAN}${C_BOLD}  Mevcut Kayıtlı Okul Klasörleri (JPS-64) ${C_RESET}"
-    echo -e "${C_CYAN}${C_BOLD}==========================================${C_RESET}"
-    
-    # student-project dizinini kontrol et
-    PROJECT_DIR="$INSTALL_DIR/student-project"
-    if [ ! -d "$PROJECT_DIR" ]; then
-        PROJECT_DIR="$INSTALL_DIR/student-projects"
-    fi
-
-    if [ -d "$PROJECT_DIR" ]; then
-        schools=$(ls -1 "$PROJECT_DIR" 2>/dev/null | grep -v '^\.')
-        if [ -z "$schools" ]; then
-            echo -e "${C_YELLOW}Henüz hiç proje gönderilmiş okul bulunmuyor.${C_RESET}"
-        else
-            for s in $schools; do
-                echo -e " ${C_GREEN}•${C_RESET} ${C_BOLD}$s${C_RESET}"
-            done
-        fi
-    else
-        echo -e "${C_YELLOW}Henüz hiç öğrenci projesi oluşturulmamış.${C_RESET}"
-    fi
-    echo -e "${C_CYAN}==========================================${C_RESET}"
-}
-
 submit_project() {
     echo -e "${C_CYAN}${C_BOLD}"
     echo "============================================="
@@ -178,7 +151,6 @@ show_help() {
     echo "Komutlar:"
     echo "  update            - Depoyu senkronize eder ve güncelleme sorar"
     echo "  submit            - Renkli arayüz ile öğrenci projesi gönderir"
-    echo "  schools           - Depodaki mevcut okul adlarını listeler"
     echo "  install <paket>   - 64-bit paketi kurar"
     echo "  remove <paket>    - Paketi sistemden kaldırır"
     echo "  info              - Sistem bilgilerini gösterir"
@@ -232,9 +204,6 @@ case "$1" in
         ;;
     submit)
         submit_project
-        ;;
-    schools)
-        list_schools
         ;;
     install)
         if [ -z "$2" ]; then
