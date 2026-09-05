@@ -1,6 +1,5 @@
 #!/bin/bash
 
-# Token URL içine gömülerek şifre sorması engellenmiştir
 REPO_URL="https://github.com/xyronixstudios-coder/Jubatus-Repo.git"
 INSTALL_DIR="/var/lib/jps-32"
 
@@ -10,12 +9,11 @@ sync_repo() {
         sudo git clone "$REPO_URL" "$INSTALL_DIR"
     else
         echo "[JPS-32] Depo güncelleniyor..."
-        sudo git -C "$INSTALL_DIR" config pull.rebase false
+        sudo git -C "$INSTALL_DIR" config pull.rebase false 2>/dev/null
         sudo git -C "$INSTALL_DIR" fetch origin main
         sudo git -C "$INSTALL_DIR" reset --hard origin/main
     fi
 
-    # Kendi kendini güncelleme mekanizması (Eski ISO'lardaki jps-32'yi otomatik günceller)
     if [ -f "$INSTALL_DIR/jps-32" ]; then
         local current_exec
         current_exec=$(readlink -f "$0" 2>/dev/null || echo "$0")
@@ -108,7 +106,6 @@ submit_project() {
         exit 1
     fi
 
-    # Okul adındaki boşlukları '-' (tire) karakteri ile değiştir
     local school_name
     school_name=$(echo "$raw_school_name" | tr ' ' '-')
 
@@ -150,7 +147,7 @@ case "$1" in
         echo "[JPS-32] Tüm sistem güncel."
         ;;
     install)
-        if [ -z "$2" ]; me
+        if [ -z "$2" ]; then
             echo "Hata: Kurulacak paket adını belirtmelisin!"
             exit 1
         fi
