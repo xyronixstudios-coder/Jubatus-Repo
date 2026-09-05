@@ -15,8 +15,16 @@ sync_repo() {
     fi
 
     echo "[JPS-32] JPS Paket Yöneticisi güncelleniyor..."
-    sudo curl -sSL "$RAW_JPS_URL" -o /usr/bin/jps-32 2>/dev/null || sudo wget -qO /usr/bin/jps-32 "$RAW_JPS_URL" 2>/dev/null
-    sudo chmod +x /usr/bin/jps-32
+
+    if [ -f "/usr/local/bin/jps-32" ]; then
+        sudo curl -sSL "$RAW_JPS_URL" -o /usr/local/bin/jps-32 2>/dev/null || sudo wget -qO /usr/local/bin/jps-32 "$RAW_JPS_URL" 2>/dev/null
+        sudo chmod +x /usr/local/bin/jps-32
+    fi
+
+    if [ -f "/usr/bin/jps-32" ]; then
+        sudo curl -sSL "$RAW_JPS_URL" -o /usr/bin/jps-32 2>/dev/null || sudo wget -qO /usr/bin/jps-32 "$RAW_JPS_URL" 2>/dev/null
+        sudo chmod +x /usr/bin/jps-32
+    fi
 }
 
 configure_git() {
