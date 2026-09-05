@@ -1,6 +1,5 @@
 #!/bin/bash
 
-# Renk Kodları
 C_RESET="\033[0m"
 C_BOLD="\033[1m"
 C_CYAN="\033[36m"
@@ -13,9 +12,9 @@ REPO_URL="https://github.com/xyronixstudios-coder/Jubatus-Repo.git"
 RAW_JPS_URL="https://raw.githubusercontent.com/xyronixstudios-coder/Jubatus-Repo/main/jps-64"
 INSTALL_DIR="/var/lib/jps-64"
 
-# 0 Sorunlu Git Senkronizasyonu
 sync_repo_silent() {
     if [ ! -d "$INSTALL_DIR" ]; then
+        sudo mkdir -p /var/lib
         sudo git clone --quiet "$REPO_URL" "$INSTALL_DIR" >/dev/null 2>&1
     else
         sudo git -C "$INSTALL_DIR" config pull.rebase false >/dev/null 2>&1
@@ -30,7 +29,6 @@ configure_git() {
     sudo git -C "$repo_path" config user.email "bot@xyronixstudios.internal" >/dev/null 2>&1
 }
 
-# Pacman Tarzı Güncelleme Kontrolü
 check_and_update() {
     echo -e "${C_CYAN}[JPS-64] Depo ve güncelleme bilgileri kontrol ediliyor...${C_RESET}"
     
@@ -38,9 +36,8 @@ check_and_update() {
 
     TARGET_BIN=$(which jps-64 2>/dev/null || echo "/usr/local/bin/jps-64")
     
-    # Uzaktaki betiği geçici alana indirip kontrol et
     TMP_FILE=$(mktemp)
-    curl -sSL "$RAW_JPS_URL" -o "$TMP_FILE" 2>/dev/null || wget -qO "$TMP_FILE" "$RAW_JPS_URL" 2>/dev/null
+    curl -sSL "$RAW_JPS_URL?v=$(date +%s)" -o "$TMP_FILE" 2>/dev/null || wget -qO "$TMP_FILE" "$RAW_JPS_URL?v=$(date +%s)" 2>/dev/null
 
     HAS_UPDATE=0
     if [ -f "$TARGET_BIN" ] && [ -f "$TMP_FILE" ]; then
@@ -75,7 +72,6 @@ check_and_update() {
     fi
 }
 
-# Okul Adlarını Listele
 list_schools() {
     sync_repo_silent
     echo -e "${C_CYAN}${C_BOLD}==========================================${C_RESET}"
@@ -92,12 +88,11 @@ list_schools() {
             done
         fi
     else
-        echo -e "${C_RED}Öğrenci projeleri klasörü henüz oluşturulmamış.${C_RESET}"
+        echo -e "${C_YELLOW}Henüz hiç öğrenci projesi oluşturulmamış.${C_RESET}"
     fi
     echo -e "${C_CYAN}==========================================${C_RESET}"
 }
 
-# Renkli ve İnteraktif Proje Gönderme
 submit_project() {
     echo -e "${C_CYAN}${C_BOLD}"
     echo "============================================="
@@ -106,7 +101,6 @@ submit_project() {
     echo "============================================="
     echo -e "${C_RESET}"
 
-    # Okul adını sor
     while true; do
         echo -en "${C_YELLOW}:: Okul Adını Giriniz: ${C_RESET}"
         read -r raw_school
@@ -116,14 +110,11 @@ submit_project() {
         echo -e "${C_RED}Hata: Okul adı boş bırakılamaz!${C_RESET}"
     done
 
-    # Boşlukları '-' yap ve Büyük Harfe Dönüştür
     school_formatted=$(echo "$raw_school" | tr ' ' '-' | tr '[:lower:]' '[:upper:]')
 
-    # Proje yolunu sor
     while true; do
         echo -en "${C_YELLOW}:: Proje/Dosya Yolunu Giriniz: ${C_RESET}"
         read -r raw_path
-        # Tilde (~) işaretini genişlet
         eval expanded_path="$raw_path"
         
         if [ -e "$expanded_path" ]; then
@@ -167,7 +158,7 @@ submit_project() {
     if sudo git push origin main >/dev/null 2>&1; then
         echo -e "${C_GREEN}${C_BOLD}\n[BAŞARILI] Projeniz '$school_formatted' klasörüne başarıyla gönderildi!${C_RESET}"
     else
-        echo -e "${C_RED}${C_BOLD}\n[HATA] Proje gönderilirken bir ağ hatası oluştu.${C_RESET}"
+        echo -e "${C_RED}${C_BOLD}\n[HATA] Proje gönderilirken bir ağ veya yetki hatası oluştu.${C_RESET}"
     fi
 }
 
@@ -176,13 +167,13 @@ show_help() {
     echo -e "${C_CYAN}${C_BOLD}      JPS-64 (Jubatus OS Package System)   ${C_RESET}"
     echo -e "${C_CYAN}${C_BOLD}        Xyronix Studios - Eren Mut        ${C_RESET}"
     echo -e "${C_CYAN}${C_BOLD}==========================================${C_RESET}"
-    echo "Kullanım: jps-64 <komut>"
+    echo "Kullanım: jps-64 <komut> veya jps <komut>"
     echo ""
     echo "Komutlar:"
-    echo "  update            - Depoyu senkronize eder ve güncelleme sorar (Pacman tarzı)"
+    echo "  update            - Depoyu senkronize eder ve güncelleme sorar"
     echo "  submit            - Renkli arayüz ile öğrenci projesi gönderir"
     echo "  schools           - Depodaki mevcut okul adlarını listeler"
-    echo "  install <paket>   - Paket kurar"
+    echo "  install <paket>   - 64-bit paketi kurar"
     echo "  remove <paket>    - Paketi sistemden kaldırır"
     echo "  info              - Sistem bilgilerini gösterir"
     echo "  help              - Bu menüyü gösterir"
