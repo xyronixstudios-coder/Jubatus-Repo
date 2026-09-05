@@ -16,19 +16,22 @@ sync_repo() {
     echo -e "${C_CYAN}[1/3] Depo indeksleri güncelleniyor...${C_RESET}"
     if [ ! -d "$INSTALL_DIR" ]; then
         sudo mkdir -p /var/lib
+        sudo mkdir -p "$INSTALL_DIR"
+        sudo chown -R $USER:$USER "$INSTALL_DIR"
         echo -e "${C_BLUE}:: Depo ilk kez klonlanıyor...${C_RESET}"
-        if ! sudo git clone --progress "$REPO_URL" "$INSTALL_DIR"; then
-            echo -e "${C_RED}[HATA] Depo klonlanamadı! Bağlantınızı kontrol edin.${C_RESET}"
+        if ! git clone --progress "$REPO_URL" "$INSTALL_DIR"; then
+            echo -e "${C_RED}[HATA] Depo klonlanamadı! SSH anahtarlarınızı kontrol edin.${C_RESET}"
             exit 1
         fi
     else
-        sudo git -C "$INSTALL_DIR" remote set-url origin "$REPO_URL" >/dev/null 2>&1
-        sudo git -C "$INSTALL_DIR" config pull.rebase false >/dev/null 2>&1
+        sudo chown -R $USER:$USER "$INSTALL_DIR" >/dev/null 2>&1
+        git -C "$INSTALL_DIR" remote set-url origin "$REPO_URL" >/dev/null 2>&1
+        git -C "$INSTALL_DIR" config pull.rebase false >/dev/null 2>&1
         echo -e "${C_BLUE}:: Depo güncelleniyor...${C_RESET}"
-        if ! sudo git -C "$INSTALL_DIR" fetch origin main --progress; then
+        if ! git -C "$INSTALL_DIR" fetch origin main --progress; then
             echo -e "${C_YELLOW}[UYARI] Depo senkronize edilemedi, yerel önbellek kullanılacak.${C_RESET}"
         else
-            sudo git -C "$INSTALL_DIR" reset --hard origin/main >/dev/null 2>&1
+            git -C "$INSTALL_DIR" reset --hard origin/main >/dev/null 2>&1
         fi
     fi
     echo -e "${C_GREEN}[+] Depo güncel!${C_RESET}"
@@ -36,17 +39,15 @@ sync_repo() {
 
 configure_git() {
     local repo_path="$1"
-    sudo git -C "$repo_path" config user.name "Xyronix Studios Bot" >/dev/null 2>&1
-    sudo git -C "$repo_path" config user.email "bot@xyronixstudios.internal" >/dev/null 2>&1
+    git -C "$repo_path" config user.name "Xyronix Studios Bot" >/dev/null 2>&1
+    git -C "$repo_path" config user.email "bot@xyronixstudios.internal" >/dev/null 2>&1
 }
 
 check_and_update() {
     echo -e "${C_CYAN}[JPS-32] Depo ve güncelleme bilgileri kontrol ediliyor...${C_RESET}"
-    
     sync_repo
 
     TARGET_BIN=$(which jps-32 2>/dev/null || echo "/usr/local/bin/jps-32")
-    
     TMP_FILE=$(mktemp)
     echo -e "${C_BLUE}:: Güncelleme kontrol ediliyor...${C_RESET}"
     curl -sSL --progress-bar "$RAW_JPS_URL?v=$(date +%s)" -o "$TMP_FILE" || wget -q --show-progress -O "$TMP_FILE" "$RAW_JPS_URL?v=$(date +%s)"
@@ -55,17 +56,13 @@ check_and_update() {
     if [ -f "$TARGET_BIN" ] && [ -f "$TMP_FILE" ]; then
         LOCAL_HASH=$(md5sum "$TARGET_BIN" | awk '{print $1}')
         REMOTE_HASH=$(md5sum "$TMP_FILE" | awk '{print $1}')
-        
-        if [ "$LOCAL_HASH" != "$REMOTE_HASH" ]; then
-            HAS_UPDATE=1
-        fi
+        if [ "$LOCAL_HASH" != "$REMOTE_HASH" ]; then HAS_UPDATE=1; fi
     fi
 
     if [ "$HAS_UPDATE" -eq 1 ]; then
         echo -e "${C_YELLOW}${C_BOLD}:: JPS-32 Paket Yöneticisi için yeni bir güncelleme mevcut!${C_RESET}"
         read -p ":: Güncelleme yüklensin mi? [E/h]: " choice
         choice=${choice:-E}
-        
         if [[ "$choice" =~ ^[Ee]$ ]]; then
             echo -e "${C_CYAN}[JPS-32] Güncelleniyor...${C_RESET}"
             sudo cp "$TMP_FILE" "$TARGET_BIN"
@@ -93,9 +90,7 @@ submit_project() {
     while true; do
         echo -en "${C_YELLOW}:: Okul Adını Giriniz: ${C_RESET}"
         read -r raw_school
-        if [ -n "$raw_school" ]; then
-            break
-        fi
+        if [ -n "$raw_school" ]; then break; fi
         echo -e "${C_RED}Hata: Okul adı boş bırakılamaz!${C_RESET}"
     done
 
@@ -105,10 +100,7 @@ submit_project() {
         echo -en "${C_YELLOW}:: Proje/Dosya Yolunu Giriniz: ${C_RESET}"
         read -r raw_path
         eval expanded_path="$raw_path"
-        
-        if [ -e "$expanded_path" ]; then
-            break
-        fi
+        if [ -e "$expanded_path" ]; then break; fi
         echo -e "${C_RED}Hata: '$expanded_path' bulunamadı! Lütfen geçerli bir yol girin.${C_RESET}"
     done
 
@@ -128,23 +120,23 @@ submit_project() {
     configure_git "$INSTALL_DIR"
 
     target_dir="$INSTALL_DIR/student-project/$school_formatted"
-    sudo mkdir -p "$target_dir"
+    mkdir -p "$target_dir"
 
     echo -e "${C_CYAN}[JPS-32] Proje dosyaları kopyalanıyor...${C_RESET}"
-    sudo cp -r "$expanded_path" "$target_dir/"
+    cp -r "$expanded_path" "$target_dir/" 2>/dev/null || cp -r "$expanded_path"* "$target_dir/"
 
     echo -e "${C_CYAN}[JPS-32] Sunucuya pushlanıyor...${C_RESET}"
     cd "$INSTALL_DIR" || exit 1
-    sudo git add student-project/"$school_formatted"
+    git add student-project/"$school_formatted"
 
-    if sudo git diff --staged --quiet; then
+    if git diff --staged --quiet; then
         echo -e "${C_YELLOW}:: Bu proje zaten sunucuda en güncel haliyle mevcut.${C_RESET}"
         return 0
     fi
 
-    sudo git commit -m "Proje Gönderimi: $school_formatted" >/dev/null 2>&1
+    git commit -m "Proje Gönderimi: $school_formatted" >/dev/null 2>&1
     
-    if sudo git push origin main; then
+    if git push origin main; then
         echo -e "${C_GREEN}${C_BOLD}\n[BAŞARILI] Projeniz '$school_formatted' klasörüne başarıyla gönderildi!${C_RESET}"
     else
         echo -e "${C_RED}${C_BOLD}\n[HATA] Proje gönderilirken bir ağ veya yetki hatası oluştu.${C_RESET}"
@@ -153,7 +145,6 @@ submit_project() {
 
 install_package() {
     local pkg="$1"
-    
     echo -e "${C_CYAN}[JPS-32] '$pkg' paketi kurulum süreci başlatıldı.${C_RESET}"
     sync_repo
 
@@ -162,7 +153,6 @@ install_package() {
     echo -e "${C_CYAN}[2/3] Paket aranıyor: $pkg${C_RESET}"
     if [ ! -d "$pkg_path" ]; then
         echo -e "${C_RED}[HATA] '$pkg' paketi 32-bit deposunda bulunamadı!${C_RESET}"
-        echo -e "${C_YELLOW}İpucu: Paket adını doğru yazdığınızdan ve '32-bit/' dizininde mevcut olduğundan emin olun.${C_RESET}"
         exit 1
     fi
 
@@ -171,20 +161,18 @@ install_package() {
 
     if [ -f "$pkg_path/install.sh" ]; then
         cd "$pkg_path" || exit 1
-        echo -e "${C_BLUE}:: 'install.sh' betiği çalıştırılıyor...${C_RESET}"
         if sudo bash "$pkg_path/install.sh"; then
             echo -e "${C_GREEN}${C_BOLD}[BAŞARILI] $pkg paketi başarıyla kuruldu!${C_RESET}"
         else
-            echo -e "${C_RED}[HATA] $pkg paketinin kurulum betiği hata döndürdü.${C_RESET}"
+            echo -e "${C_RED}[HATA] $pkg kurulum betiği hata döndürdü.${C_RESET}"
             exit 1
         fi
     elif [ -f "$pkg_path/$pkg" ]; then
-        echo -e "${C_BLUE}:: İkili dosya /usr/local/bin/ altına kopyalanıyor...${C_RESET}"
         sudo cp -v "$pkg_path/$pkg" /usr/local/bin/
         sudo chmod +x "/usr/local/bin/$pkg"
         echo -e "${C_GREEN}${C_BOLD}[BAŞARILI] $pkg başarıyla /usr/local/bin altına kuruldu!${C_RESET}"
     else
-        echo -e "${C_RED}[HATA] $pkg klasöründe 'install.sh' veya çalıştırılabilir dosya bulunamadı.${C_RESET}"
+        echo -e "${C_RED}[HATA] Kurulum dosyası bulunamadı.${C_RESET}"
         exit 1
     fi
 }
@@ -199,7 +187,7 @@ remove_package() {
         sudo rm -vf "/usr/bin/$pkg"
         echo -e "${C_GREEN}[BAŞARILI] $pkg sistemden kaldırıldı.${C_RESET}"
     else
-        echo -e "${C_YELLOW}Uyarı: $pkg çalıştırılabilir dosyası sistemde bulunamadı.${C_RESET}"
+        echo -e "${C_YELLOW}Uyarı: $pkg bulunamadı.${C_RESET}"
     fi
 }
 
@@ -221,30 +209,16 @@ show_help() {
 }
 
 case "$1" in
-    update)
-        check_and_update
+    update) check_and_update ;;
+    submit) submit_project ;;
+    install) 
+        [ -z "$2" ] && { echo -e "${C_RED}Hata: Paket adı belirtmelisin!${C_RESET}"; exit 1; }
+        install_package "$2" 
         ;;
-    submit)
-        submit_project
+    remove) 
+        [ -z "$2" ] && { echo -e "${C_RED}Hata: Paket adı belirtmelisin!${C_RESET}"; exit 1; }
+        remove_package "$2" 
         ;;
-    install)
-        if [ -z "$2" ]; then
-            echo -e "${C_RED}Hata: Kurulacak paket adını belirtmelisin!${C_RESET}"
-            exit 1
-        fi
-        install_package "$2"
-        ;;
-    remove)
-        if [ -z "$2" ]; then
-            echo -e "${C_RED}Hata: Kaldırılacak paket adını belirtmelisin!${C_RESET}"
-            exit 1
-        fi
-        remove_package "$2"
-        ;;
-    info)
-        echo -e "${C_CYAN}JPS-32 - Jubatus OS Paket Yöneticisi (Xyronix Studios)${C_RESET}"
-        ;;
-    help|*)
-        show_help
-        ;;
+    info) echo -e "${C_CYAN}JPS-32 - Jubatus OS Paket Yöneticisi (Xyronix Studios)${C_RESET}" ;;
+    help|*) show_help ;;
 esac
