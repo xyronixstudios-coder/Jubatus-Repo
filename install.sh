@@ -19,7 +19,6 @@ ARCH=$(uname -m)
 if [ "$ARCH" = "x86_64" ]; then
     echo -e "${C_GREEN}[+] 64-bit mimari tespit edildi. jps-64 indirilip kuruluyor...${C_RESET}"
     
-    # Yerelde varsa yerelden, yoksa depodan çek
     if [ -f "jps-64" ]; then
         sudo cp jps-64 /usr/local/bin/jps-64
     else
