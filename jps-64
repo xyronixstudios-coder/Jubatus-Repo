@@ -22,6 +22,8 @@ sync_repo() {
             exit 1
         fi
     else
+        # Kökten çözüm: Yerel dizinin remote adresi HTTPS ise SSH'a çevir
+        sudo git -C "$INSTALL_DIR" remote set-url origin "$REPO_URL" >/dev/null 2>&1
         sudo git -C "$INSTALL_DIR" config pull.rebase false >/dev/null 2>&1
         echo -e "${C_BLUE}:: Depo güncelleniyor...${C_RESET}"
         if ! sudo git -C "$INSTALL_DIR" fetch origin main --progress; then
@@ -178,7 +180,7 @@ install_package() {
             exit 1
         fi
     elif [ -f "$pkg_path/$pkg" ]; then
-        echo -e "${C_BLUE}:: Ikili dosya /usr/local/bin/ altına kopyalanıyor...${C_RESET}"
+        echo -e "${C_BLUE}:: İkili dosya /usr/local/bin/ altına kopyalanıyor...${C_RESET}"
         sudo cp -v "$pkg_path/$pkg" /usr/local/bin/
         sudo chmod +x "/usr/local/bin/$pkg"
         echo -e "${C_GREEN}${C_BOLD}[BAŞARILI] $pkg başarıyla /usr/local/bin altına kuruldu!${C_RESET}"
@@ -205,7 +207,7 @@ remove_package() {
 show_help() {
     echo -e "${C_CYAN}${C_BOLD}==========================================${C_RESET}"
     echo -e "${C_CYAN}${C_BOLD}      JPS-64 (Jubatus OS Package System)   ${C_RESET}"
-    echo -e "${C_CYAN}${C_BOLD}        Xyronix Studios - Eren Mut        ${C_RESET}"
+    echo -e "${C_CYAN}${C_BOLD}        Xyronix Studios - Eren Mut       ${C_RESET}"
     echo -e "${C_CYAN}${C_BOLD}==========================================${C_RESET}"
     echo "Kullanım: jps-64 <komut> veya jps <komut>"
     echo ""

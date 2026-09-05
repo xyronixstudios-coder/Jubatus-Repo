@@ -22,6 +22,7 @@ sync_repo() {
             exit 1
         fi
     else
+        sudo git -C "$INSTALL_DIR" remote set-url origin "$REPO_URL" >/dev/null 2>&1
         sudo git -C "$INSTALL_DIR" config pull.rebase false >/dev/null 2>&1
         echo -e "${C_BLUE}:: Depo güncelleniyor...${C_RESET}"
         if ! sudo git -C "$INSTALL_DIR" fetch origin main --progress; then
@@ -205,7 +206,7 @@ remove_package() {
 show_help() {
     echo -e "${C_CYAN}${C_BOLD}==========================================${C_RESET}"
     echo -e "${C_CYAN}${C_BOLD}      JPS-32 (Jubatus OS Package System)   ${C_RESET}"
-    echo -e "${C_CYAN}${C_BOLD}        Xyronix Studios - Eren Mut        ${C_RESET}"
+    echo -e "${C_CYAN}${C_BOLD}        Xyronix Studios - Eren Mut       ${C_RESET}"
     echo -e "${C_CYAN}${C_BOLD}==========================================${C_RESET}"
     echo "Kullanım: jps-32 <komut>"
     echo ""
