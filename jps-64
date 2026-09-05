@@ -14,18 +14,13 @@ sync_repo() {
         sudo git -C "$INSTALL_DIR" reset --hard origin/main
     fi
 
-    echo "[JPS-64] JPS Paket Yöneticisi güncelleniyor..."
+    echo "[JPS-64] JPS betiği GitHub'dan yenileniyor..."
     
-    # Nerede kurulu olursa olsun (hem /usr/local/bin hem /usr/bin) hepsini günceller
-    if [ -f "/usr/local/bin/jps-64" ]; then
-        sudo curl -sSL "$RAW_JPS_URL" -o /usr/local/bin/jps-64 2>/dev/null || sudo wget -qO /usr/local/bin/jps-64 "$RAW_JPS_URL" 2>/dev/null
-        sudo chmod +x /usr/local/bin/jps-64
-    fi
-
-    if [ -f "/usr/bin/jps-64" ]; then
-        sudo curl -sSL "$RAW_JPS_URL" -o /usr/bin/jps-64 2>/dev/null || sudo wget -qO /usr/bin/jps-64 "$RAW_JPS_URL" 2>/dev/null
-        sudo chmod +x /usr/bin/jps-64
-    fi
+    # Kullanıcı nerede çalıştırırsa çalıştırsın, çalısan betiğin kendisini günceller
+    TARGET_BIN=$(which jps-64 2>/dev/null || echo "/usr/local/bin/jps-64")
+    
+    sudo curl -sSL "$RAW_JPS_URL" -o "$TARGET_BIN" 2>/dev/null || sudo wget -qO "$TARGET_BIN" "$RAW_JPS_URL" 2>/dev/null
+    sudo chmod +x "$TARGET_BIN"
 }
 
 configure_git() {
@@ -144,14 +139,14 @@ submit_project() {
 case "$1" in
     update)
         sync_repo
-        echo "[JPS-64] Depo ve JPS paket yöneticisi başarıyla güncellendi!"
+        echo "[JPS-64] Depo ve JPS betiği başarıyla yenilendi!"
         ;;
     upgrade)
         sync_repo
         echo "[JPS-64] Tüm sistem güncel."
         ;;
     install)
-        if [ -z "$2" ]; then
+        if [ -z "$2" ]; me
             echo "Hata: Kurulacak paket adını belirtmelisin!"
             exit 1
         fi
