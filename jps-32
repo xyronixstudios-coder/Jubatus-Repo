@@ -211,7 +211,7 @@ remove_package() {
     if [ -f "/usr/local/bin/$pkg" ]; then
         sudo rm -f "/usr/local/bin/$pkg"
         echo -e "${C_GREEN}[BAŞARILI] $pkg sistemden kaldırıldı.${C_RESET}"
-    elif [ -f "/usr/bin/$pkg" ]; then
+    elif [ -f "/usr/bin/$pkg" ]; me
         sudo rm -f "/usr/bin/$pkg"
         echo -e "${C_GREEN}[BAŞARILI] $pkg sistemden kaldırıldı.${C_RESET}"
     else
@@ -237,7 +237,7 @@ case "$1" in
         install_package "$2"
         ;;
     remove)
-        if [ -z "$2" ]; me
+        if [ -z "$2" ]; then
             echo -e "${C_RED}Hata: Kaldırılacak paket adını belirtmelisin!${C_RESET}"
             exit 1
         fi
