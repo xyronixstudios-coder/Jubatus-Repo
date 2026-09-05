@@ -1,0 +1,121 @@
+#!/bin/bash
+
+# Token URL içine gömülerek şifre sorması engellenmiştir
+REPO_URL="https://github.com/xyronixstudios-coder/Jubatus-Repo.git"
+INSTALL_DIR="/var/lib/jps-64"
+
+sync_repo() {
+    if [ ! -d "$INSTALL_DIR" ]; then
+        echo "[JPS-64] Depo klonlanıyor..."
+        sudo git clone "$REPO_URL" "$INSTALL_DIR"
+    else
+        echo "[JPS-64] Depo güncelleniyor..."
+        sudo git -C "$INSTALL_DIR" pull origin main
+    fi
+}
+
+configure_git() {
+    local repo_path="$1"
+    sudo git -C "$repo_path" config user.name "Xyronix Studios Bot"
+    sudo git -C "$repo_path" config user.email "bot@xyronixstudios.internal"
+}
+
+show_help() {
+    echo "=========================================="
+    echo "      JPS-64 (Jubatus OS Package System)   "
+    echo "        Xyronix Studios - Resmi Sistem    "
+    echo "=========================================="
+    echo "Kullanım: jps-64 <komut> [argüman]"
+    echo ""
+    echo "Komutlar:"
+    echo "  update            - Depoyu sunucuyla senkronize eder"
+    echo "  upgrade           - Sistem paketlerini günceller"
+    echo "  install <paket>   - Paket kurar"
+    echo "  remove <paket>    - Paketi sistemden kaldırır"
+    echo "  submit <okul_adi> <proje_yolu> - Öğrenci projesini gönderir"
+    echo "  info              - Paket sistemi hakkında bilgi verir"
+    echo "  help              - Bu yardım menüsünü gösterir"
+    echo "=========================================="
+}
+
+show_info() {
+    echo "=========================================="
+    echo "  Paket Yöneticisi: JPS-64 (Jubatus OS)"
+    echo "  Hedef Mimari   : 64-bit & Ortak Öğrenci Havuzu"
+    echo "  Stüdyo         : Xyronix Studios"
+    echo "=========================================="
+}
+
+submit_project() {
+    local school_name="$1"
+    local project_path="$2"
+
+    if [ -z "$school_name" ] || [ -z "$project_path" ]; then
+        echo "Hata: Okul adını ve proje yolunu belirtmelisin!"
+        echo "Kullanım: jps-64 submit <okul_adi> <proje_yolu>"
+        exit 1
+    fi
+
+    if [ ! -e "$project_path" ]; then
+        echo "Hata: Belirtilen proje yolu bulunamadı: $project_path"
+        exit 1
+    fi
+
+    sync_repo
+    configure_git "$INSTALL_DIR"
+
+    local target_dir="$INSTALL_DIR/student-projects/$school_name"
+    sudo mkdir -p "$target_dir"
+
+    echo "[JPS-64] Proje $school_name klasörüne kopyalanıyor..."
+    sudo cp -r "$project_path" "$target_dir/"
+
+    echo "[JPS-64] Git değişiklikleri hazırlanıyor ve gönderiliyor..."
+    cd "$INSTALL_DIR" || exit 1
+    sudo git add student-projects/"$school_name"
+    
+    # Değişiklik yoksa hata vermemesi için kontrol
+    if sudo git diff --staged --quiet; then
+        echo "[JPS-64] Gönderilecek yeni bir değişiklik bulunamadı (zaten güncel)."
+        return 0
+    fi
+
+    sudo git commit -m "Otomatik Proje Gönderimi: $school_name"
+    sudo git push origin main
+    echo "[BAŞARILI] Proje resmi havuza başarıyla gönderildi!"
+}
+
+case "$1" in
+    update)
+        sync_repo
+        echo "[JPS-64] Depo başarıyla güncellendi!"
+        ;;
+    upgrade)
+        sync_repo
+        echo "[JPS-64] Tüm sistem güncel."
+        ;;
+    install)
+        if [ -z "$2" ]; then
+            echo "Hata: Kurulacak paket adını belirtmelisin!"
+            exit 1
+        fi
+        sync_repo
+        echo "[JPS-64] $2 paketi yükleniyor..."
+        ;;
+    remove)
+        if [ -z "$2" ]; then
+            echo "Hata: Kaldırılacak paket adını belirtmelisin!"
+            exit 1
+        fi
+        echo "[JPS-64] $2 paketi kaldırılıyor..."
+        ;;
+    submit)
+        submit_project "$2" "$3"
+        ;;
+    info)
+        show_info
+        ;;
+    help|*)
+        show_help
+        ;;
+esac
