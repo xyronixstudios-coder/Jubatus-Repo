@@ -8,7 +8,7 @@ C_YELLOW="\033[33m"
 C_RED="\033[31m"
 C_BLUE="\033[34m"
 
-REPO_URL="git@github.com:xyronixstudios-coder/Jubatus-Repo.git"
+REPO_URL="https://github.com/xyronixstudios-coder/Jubatus-Repo.git"
 RAW_JPS_URL="https://raw.githubusercontent.com/xyronixstudios-coder/Jubatus-Repo/main/jps-64"
 INSTALL_DIR="/var/lib/jps-64"
 
@@ -20,7 +20,7 @@ sync_repo() {
         sudo chown -R $USER:$USER "$INSTALL_DIR"
         echo -e "${C_BLUE}:: Depo ilk kez klonlanıyor...${C_RESET}"
         if ! git clone --progress "$REPO_URL" "$INSTALL_DIR"; then
-            echo -e "${C_RED}[HATA] Depo klonlanamadı! SSH anahtarlarınızı kontrol edin.${C_RESET}"
+            echo -e "${C_RED}[HATA] Depo klonlanamadı! Bağlantınızı kontrol edin.${C_RESET}"
             exit 1
         fi
     else
@@ -119,7 +119,6 @@ submit_project() {
     sync_repo
     configure_git "$INSTALL_DIR"
 
-    # DOĞRU KLASÖR YOLU: student-projects/OKUL-ADI
     target_dir="$INSTALL_DIR/student-projects/$school_formatted"
     mkdir -p "$target_dir"
 
