@@ -1,6 +1,7 @@
 #!/bin/bash
 
 REPO_URL="https://github.com/xyronixstudios-coder/Jubatus-Repo.git"
+RAW_JPS_URL="https://raw.githubusercontent.com/xyronixstudios-coder/Jubatus-Repo/main/jps-32"
 INSTALL_DIR="/var/lib/jps-32"
 
 sync_repo() {
@@ -9,19 +10,13 @@ sync_repo() {
         sudo git clone "$REPO_URL" "$INSTALL_DIR"
     else
         echo "[JPS-32] Depo güncelleniyor..."
-        sudo git -C "$INSTALL_DIR" config pull.rebase false 2>/dev/null
-        sudo git -C "$INSTALL_DIR" fetch origin main
+        sudo git -C "$INSTALL_DIR" fetch --all
         sudo git -C "$INSTALL_DIR" reset --hard origin/main
     fi
 
-    if [ -f "$INSTALL_DIR/jps-32" ]; then
-        local current_exec
-        current_exec=$(readlink -f "$0" 2>/dev/null || echo "$0")
-        if [ -w "$current_exec" ] || [ "$EUID" -eq 0 ]; then
-            sudo cp "$INSTALL_DIR/jps-32" "$current_exec" 2>/dev/null
-            sudo chmod +x "$current_exec" 2>/dev/null
-        fi
-    fi
+    echo "[JPS-32] JPS Paket Yöneticisi güncelleniyor..."
+    sudo curl -sSL "$RAW_JPS_URL" -o /usr/bin/jps-32 2>/dev/null || sudo wget -qO /usr/bin/jps-32 "$RAW_JPS_URL" 2>/dev/null
+    sudo chmod +x /usr/bin/jps-32
 }
 
 configure_git() {
@@ -38,7 +33,7 @@ show_help() {
     echo "Kullanım: jps-32 <komut> [argüman]"
     echo ""
     echo "Komutlar:"
-    echo "  update            - Depoyu ve JPS paket yöneticisini günceller"
+    echo "  update            - Depoyu ve JPS betiğini günceller"
     echo "  upgrade           - Sistem paketlerini günceller"
     echo "  install <paket>   - Paket kurar"
     echo "  remove <paket>    - Paketi sistemden kaldırır"
@@ -92,7 +87,7 @@ remove_package() {
         sudo rm -f "/usr/bin/$pkg"
         echo "[BAŞARILI] $pkg sistemden kaldırıldı."
     else
-        echo "Uyarı: $pkg çalıştırılabilir dosyası standart dizinlerde bulunamadı."
+        echo "Uyarı: $pkg çalıştırılabilir dosyası bulunamadı."
     fi
 }
 
