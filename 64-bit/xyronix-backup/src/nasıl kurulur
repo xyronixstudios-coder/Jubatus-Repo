@@ -1,0 +1,11 @@
+Windows İşletim Sistemlerinde:
+Eğer Bilgisayarınızda Python Kurulu Değilse Kurun:
+python dosya exe formatında yüklenir ve kurulur.
+install.py üzerine tıklanır ve kurulur.
+
+Linux Dağıtımlarında:
+Eğer Bilgisayarınızda Python Kurulu Değilse Kurun:
+sudo apt install pyhton 3 (Debian)
+
+Ve Kurulumu Başlatın:
+python3 install.py

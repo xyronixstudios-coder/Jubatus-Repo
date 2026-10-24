@@ -1,0 +1,110 @@
+# Xyronix Backup V3 Pro — Sürüm Notları
+
+**Sürüm:** V3 Pro
+**Durum:** Kararlı geliştirme sürümü
+**Geliştirici:** Xyronix Studios
+
+## 🚀 Yeni Özellikler
+
+### 💾 Akıllı Delta Yedekleme
+
+* Önceki yedekleme ile mevcut dosyalar karşılaştırılır.
+* **Değişmeyen dosyalar yeniden kopyalanmaz.**
+* Yalnızca yeni veya değiştirilmiş dosyalar yedeklenir.
+* Dosya boyutu ve değiştirilme zamanı üzerinden değişiklik tespiti yapılır.
+
+### 📸 Snapshot Sistemi
+
+Her yedekleme ayrı bir tarih/saat klasöründe saklanır:
+
+`XyronixBackup/YYYY-MM-DD_HH-MM/`
+
+Böylece önceki yedekler korunur ve farklı yedekleme noktalarına geri dönülebilir.
+
+### ♻️ Geri Yükleme Sistemi
+
+* USB veya yedekleme klasörü seçilebilir.
+* Mevcut snapshot'lar tarihleriyle listelenir.
+* İstenen snapshot seçilerek kullanıcı dizinlerine geri yüklenebilir.
+* Geri yükleme öncesinde kullanıcıdan onay alınır.
+
+### ⏸️ Yedeklemeyi Duraklatma
+
+* Devam eden yedekleme geçici olarak durdurulabilir.
+* **▶ Devam Et** ile kaldığı yerden devam eder.
+
+### ⏹️ Yedeklemeyi İptal Etme
+
+* Aktif yedekleme kullanıcı tarafından iptal edilebilir.
+* İşlem güvenli şekilde sonlandırılır.
+
+### 📊 İlerleme Takibi
+
+* Gerçek zamanlı ilerleme çubuğu.
+* Yüzde bilgisi.
+* İşlenen dosyanın adı.
+* Kopyalama veya snapshot işleminin mevcut durumu.
+
+### 💽 Disk Alanı Kontrolü
+
+Yedekleme başlamadan önce hedef diskin boş alanı kontrol edilir.
+
+Yeterli alan yoksa işlem başlamadan kullanıcıya:
+
+> **Yetersiz Alan!**
+
+uyarısı gösterilir.
+
+### 🌍 Çoklu Dil Dizin Desteği
+
+Windows ve Linux klasör isimleri otomatik algılanır:
+
+* `Masaüstü` / `Desktop`
+* `Belgeler` / `Documents`
+* `Müzik` / `Music`
+* `Resimler` / `Pictures`
+* `Videolar` / `Videos`
+* `İndirilenler` / `Downloads`
+
+## 🖥️ Arayüz
+
+V3 Pro ile birlikte:
+
+* 💾 **Yedekle** sekmesi
+* ♻️ **Geri Yükle** sekmesi
+* Modern koyu tema
+* Durum göstergesi
+* İlerleme çubuğu
+* Duraklat / devam et
+* İptal et
+* Snapshot listesi
+
+eklendi.
+
+## 🧠 Teknik Altyapı
+
+* Python
+* Tkinter / ttk
+* `pathlib`
+* `shutil`
+* `threading`
+* JSON tabanlı manifest sistemi
+* Dosya boyutu + değiştirilme zamanı karşılaştırması
+* Thread tabanlı arka plan işlemleri
+
+## ⚠️ Bilinen Sınırlamalar
+
+* Snapshot'lar arasında değişmeyen dosyalar için kullanılan bağlantı mekanizması dosya sistemine bağlı olarak farklı davranabilir.
+* Çok büyük yedeklerde tarama işlemi zaman alabilir.
+* Geri yükleme şu aşamada seçilen snapshot'ın içeriğini kullanıcı dizinlerine geri kopyalar; gelişmiş dosya çakışması yönetimi henüz bulunmamaktadır.
+
+## 📌 V3 Pro Özeti
+
+**Xyronix Backup artık yalnızca dosya kopyalayan bir araç değil;**
+
+> **Delta yedekleme + Snapshot + Geri Yükleme + Duraklatma + İptal + Alan Kontrolü**
+
+özelliklerini bir araya getiren gerçek bir masaüstü yedekleme uygulamasına dönüşmüştür.
+
+**Xyronix Backup V3 Pro — Simple. Safe. Yours.**
+
