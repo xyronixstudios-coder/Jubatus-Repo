@@ -37,18 +37,24 @@ install_package() {
         done < "$pkg_path/depends.txt"
     fi
 
-    # Kurulum (install.sh ciktisi gizli, JPS kendi bar'ini basar)
+    # Kurulum: install.sh ciktisini gecici dosyaya al, bar'i temiz tut
+    local log_file
+    log_file=$(mktemp "/tmp/jps-install-${pkg}.XXXXXX.log")
     progress_start "$(msg progress_install) $pkg"
     if [ -f "$pkg_path/install.sh" ]; then
-        ( cd "$pkg_path" && sudo bash install.sh )
+        ( cd "$pkg_path" && sudo bash install.sh ) > "$log_file" 2>&1
         local rc=$?
         if [ $rc -ne 0 ]; then
             progress_fail
             echo -e "${C_RED}$(msg pkg_install_fail "$pkg")${C_RESET}"
+            echo -e "${C_YELLOW}:: Hata logu: $log_file${C_RESET}"
+            tail -20 "$log_file" | sed 's/^/  /'
             return 1
         fi
         progress_set 100
         progress_done
+        # Basariliysa log'u sil
+        rm -f "$log_file"
         echo -e "${C_GREEN}${C_BOLD}$(msg pkg_install_ok "$pkg")${C_RESET}"
     else
         progress_fail
