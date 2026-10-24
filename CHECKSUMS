@@ -1,1 +1,4 @@
-# JPS checksums - generated before push
+# JPS checksums - auto-generated
+# Format: <sha256>  <filename>
+d791c1a10d4df4b12eb80a15fd276429f8f7fc0ec7dd4658a7f1e4bca0cc155a  jps-64
+a7b88cab7c4bf28c7c0ef1c5fd878a39783ecac7553ba04805141e5c18caf0ae  jps-32
