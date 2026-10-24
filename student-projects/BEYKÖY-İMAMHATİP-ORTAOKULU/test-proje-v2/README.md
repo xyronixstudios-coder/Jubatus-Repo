@@ -1,1 +1,0 @@
-Merhaba Jubatus v2!
