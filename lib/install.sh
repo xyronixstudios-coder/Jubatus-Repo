@@ -37,28 +37,41 @@ install_package() {
         done < "$pkg_path/depends.txt"
     fi
 
-    # Kurulum: install.sh ciktisini gecici dosyaya al, bar'i temiz tut
+    # Kurulum: install.sh arka planda, bar artimli ilerler
     local log_file
     log_file=$(mktemp "/tmp/jps-install-${pkg}.XXXXXX.log")
+
     progress_start "$(msg progress_install) $pkg"
-    if [ -f "$pkg_path/install.sh" ]; then
-        ( cd "$pkg_path" && sudo bash install.sh ) > "$log_file" 2>&1
-        local rc=$?
-        if [ $rc -ne 0 ]; then
-            progress_fail
-            echo -e "${C_RED}$(msg pkg_install_fail "$pkg")${C_RESET}"
-            echo -e "${C_YELLOW}:: Hata logu: $log_file${C_RESET}"
-            tail -20 "$log_file" | sed 's/^/  /'
-            return 1
+
+    # install.sh'i arka planda baslat
+    ( cd "$pkg_path" && sudo bash install.sh ) > "$log_file" 2>&1 &
+    local install_pid=$!
+
+    # Bar'i artimli guncelle (0 -> 95), install.sh bitene kadar
+    local pct=0
+    while kill -0 "$install_pid" 2>/dev/null; do
+        sleep 0.5
+        if [ $pct -lt 95 ]; then
+            pct=$((pct + 3))
+            [ $pct -gt 95 ] && pct=95
+            progress_set "$pct"
         fi
-        progress_set 100
-        progress_done
-        # Basariliysa log'u sil
-        rm -f "$log_file"
-        echo -e "${C_GREEN}${C_BOLD}$(msg pkg_install_ok "$pkg")${C_RESET}"
-    else
+    done
+
+    # install.sh bitti mi, basarili mi?
+    wait "$install_pid"
+    local rc=$?
+
+    if [ $rc -ne 0 ]; then
         progress_fail
         echo -e "${C_RED}$(msg pkg_install_fail "$pkg")${C_RESET}"
+        echo -e "${C_YELLOW}:: Hata logu: $log_file${C_RESET}"
+        tail -20 "$log_file" | sed 's/^/  /'
         return 1
     fi
+
+    progress_set 100
+    progress_done
+    rm -f "$log_file"
+    echo -e "${C_GREEN}${C_BOLD}$(msg pkg_install_ok "$pkg")${C_RESET}"
 }
