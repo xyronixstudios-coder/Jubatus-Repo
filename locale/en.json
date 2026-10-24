@@ -50,6 +50,7 @@
     "arch_detected": "Architecture detected: %s",
     "arch_unsupported": "Unsupported architecture: %s",
     "package_list_title": "Available packages (%s-bit):",
-    "search_title": "Search: %s"
+    "search_title": "Search: %s",
+    "lang_name": "English"
   }
 }

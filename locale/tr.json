@@ -50,6 +50,7 @@
     "arch_detected": "Mimari tespit edildi: %s",
     "arch_unsupported": "Desteklenmeyen mimari: %s",
     "package_list_title": "Mevcut paketler (%s-bit):",
-    "search_title": "Arama: %s"
+    "search_title": "Arama: %s",
+    "lang_name": "Türkçe"
   }
 }
