@@ -9,14 +9,14 @@ Jubatus OS için modern paket yöneticisi. **Türkçe + İngilizce** (sistem dil
 ## Kullanım
 
     jps-64 help              # Yardım (TR/EN otomatik)
-    jps-64 install <paket>   # Paket kur (örn: jps-64 install btop)
+    jps-64 install <paket>   # Paket kur
     jps-64 remove <paket>    # Paket kaldır
     jps-64 list              # Mevcut paketler
     jps-64 search <kelime>   # Paket ara
     jps-64 update            # Depoyu güncelle
     jps-64 self-update       # JPS'i güncelle
 
-## Mevcut Paketler
+## Mevcut Paketler (14)
 
 | Paket | Açıklama | 64-bit | 32-bit |
 |---|---|---|---|
@@ -32,11 +32,13 @@ Jubatus OS için modern paket yöneticisi. **Türkçe + İngilizce** (sistem dil
 | tldr | Kısa man sayfaları (Türkçe destekli) | ✅ | ✅ |
 | htop | Klasik sistem monitörü | ✅ | ✅ |
 | neofetch | Klasik sistem bilgisi | ✅ | ✅ |
+| xyronix-backup | Xyronix Backup V3 Pro (GUI) | ✅ | ✅ |
+| xyronix-kivi | Xyronix Kivi Editor (TUI) | ✅ | ✅ |
 
 ## Dil Desteği
 
-- Türkçe (tr)
-- İngilizce (en)
+- 🇹🇷 Türkçe (tr)
+- 🇬🇧 İngilizce (en)
 - Sistem dili otomatik algılanır (`LANG`/`LC_ALL`)
 - `JPS_LANG=tr jps-64 help` ile zorla
 
