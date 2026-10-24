@@ -1,0 +1,11 @@
+# JPS yedek dosyaları
+*.bak
+*.orig
+*.tmp
+
+# JPS cache
+/var/lib/jps-*/
+
+# Gereksiz
+.DS_Store
+*.swp
