@@ -2,6 +2,16 @@
 set -euo pipefail
 export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:$PATH"
 
+# 1. apt/pacman/dnf
+if command -v apt-get >/dev/null 2>&1; then
+    sudo apt-get install -y ncdu >/dev/null 2>&1 && { echo "ncdu kuruldu (apt)"; exit 0; }
+elif command -v pacman >/dev/null 2>&1; then
+    sudo pacman -S --noconfirm ncdu >/dev/null 2>&1 && { echo "ncdu kuruldu (pacman)"; exit 0; }
+elif command -v dnf >/dev/null 2>&1; then
+    sudo dnf install -y ncdu >/dev/null 2>&1 && { echo "ncdu kuruldu (dnf)"; exit 0; }
+fi
+
+# 2. Fallback: statik binary
 NCDU_VERSION="2.7"
 ARCH=$(uname -m)
 case "$ARCH" in
@@ -11,27 +21,16 @@ case "$ARCH" in
     *) echo "[HATA] Desteklenmeyen mimari: $ARCH"; exit 1 ;;
 esac
 
-# Dogru URL: linux-x86_64 (x86_64 degil!)
 NCDU_URL="https://dev.yorhel.nl/download/ncdu-${NCDU_VERSION}-${NCDU_ARCH}.tar.gz"
 TARGET="/usr/local/bin/ncdu"
 
 echo ":: ncdu ${NCDU_VERSION} (${NCDU_ARCH}) indiriliyor..."
 TMP_DIR=$(mktemp -d)
 cd "$TMP_DIR"
-
-if ! curl -fsSL --retry 3 --proto '=https' "$NCDU_URL" -o ncdu.tar.gz; then
-    echo "[HATA] ncdu indirilemedi: $NCDU_URL" >&2
-    exit 1
-fi
-
+curl -fsSL --retry 3 --proto '=https' "$NCDU_URL" -o ncdu.tar.gz
 tar -xzf ncdu.tar.gz
 NCDU_BIN=$(find . -type f -name "ncdu" -executable | head -1)
-if [ -z "$NCDU_BIN" ]; then
-    echo "[HATA] ncdu binary bulunamadi" >&2
-    find . -type f -executable | head -10 >&2
-    exit 1
-fi
-
+[ -z "$NCDU_BIN" ] && { echo "[HATA] ncdu binary bulunamadi"; exit 1; }
 sudo cp -f "$NCDU_BIN" "$TARGET"
 sudo chmod +x "$TARGET"
 cd ~ && rm -rf "$TMP_DIR"
