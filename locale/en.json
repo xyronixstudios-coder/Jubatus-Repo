@@ -51,6 +51,7 @@
     "arch_unsupported": "Unsupported architecture: %s",
     "package_list_title": "Available packages (%s-bit):",
     "search_title": "Search: %s",
-    "lang_name": "English"
+    "lang_name": "English",
+    "help_submit": "submit            - Submit student project"
   }
 }

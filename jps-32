@@ -66,9 +66,6 @@ remove_package() {
 
 list_packages() {
     sync_repo >/dev/null 2>&1 || true
-    local dir="$INSTALL_DIR/$JPS_ARCH_BITS-bit"
-    [ -d "$dir" ] || return
-    echo -e "${C_ORANGE}${C_BOLD}$(msg package_list_title "$JPS_ARCH_BITS")${C_RESET}"
     for p in "$dir"/*/; do
         [ -d "$p" ] && basename "$p"
     done
@@ -98,6 +95,7 @@ show_help() {
     echo "$(msg help_cmds)"
     echo "  $(msg help_update)"
     echo "  $(msg help_selfupdate)"
+    echo "  $(msg help_submit)"
     echo "  $(msg help_install)"
     echo "  $(msg help_remove)"
     echo "  $(msg help_search)"
@@ -107,14 +105,103 @@ show_help() {
     echo -e "${C_ORANGE}==========================================${C_RESET}"
 }
 
+info_package() {
+    echo -e "${C_ORANGE}${C_BOLD}╔══════════════════════════════════════╗${C_RESET}"
+    echo -e "${C_ORANGE}${C_BOLD}║  JPS-${JPS_ARCH_BITS} - Jubatus Package System${C_RESET}"
+    echo -e "${C_ORANGE}${C_BOLD}╚══════════════════════════════════════╝${C_RESET}"
+    echo ""
+    echo -e "${C_BOLD}Sürüm:${C_RESET}          $JPS_VERSION"
+    echo -e "${C_BOLD}Mimari:${C_RESET}         ${JPS_ARCH_BITS}-bit ($(uname -m))"
+    echo -e "${C_BOLD}Dil:${C_RESET}            $JPS_LANG ($(msg lang_name 2>/dev/null || echo "$JPS_LANG"))"
+    echo -e "${C_BOLD}Repo:${C_RESET}           $REPO_URL"
+    echo -e "${C_BOLD}Kurulum Dizini:${C_RESET}  $INSTALL_DIR"
+    echo ""
+    if [ -d "$INSTALL_DIR/${JPS_ARCH_BITS}-bit" ]; then
+        local pkg_count
+        pkg_count=$(find "$INSTALL_DIR/${JPS_ARCH_BITS}-bit" -maxdepth 1 -mindepth 1 -type d 2>/dev/null | wc -l)
+        echo -e "${C_BOLD}Mevcut Paket:${C_RESET}     $pkg_count"
+    fi
+    local installed=()
+    for bin in fastfetch btop bat eza rg fzf zoxide lazygit jq tldr htop neofetch nvim delta ncdu chafa cmatrix cowsay yt-dlp btm kivi xyronix-backup; do
+        command -v "$bin" >/dev/null 2>&1 && installed+=("$bin")
+    done
+    echo -e "${C_BOLD}Kurulu:${C_RESET}           ${#installed[@]} paket"
+    if [ ${#installed[@]} -gt 0 ]; then
+        echo -e "  ${C_GREEN}${installed[*]}${C_RESET}"
+    fi
+    echo ""
+    echo -e "${C_ORANGE}╔══════════════════════════════════════╗${C_RESET}"
+    echo -e "${C_ORANGE}║  Xyronix Studios - Eren Mut${C_RESET}"
+    echo -e "${C_ORANGE}╚══════════════════════════════════════╝${C_RESET}"
+}
+
+
+submit_project() {
+    echo -e "${C_ORANGE}${C_BOLD}╔══════════════════════════════════════╗${C_RESET}"
+    echo -e "${C_ORANGE}${C_BOLD}║  JPS-${JPS_ARCH_BITS} Öğrenci Projesi Gönderimi${C_RESET}"
+    echo -e "${C_ORANGE}${C_BOLD}║  Xyronix Studios Portal${C_RESET}"
+    echo -e "${C_ORANGE}${C_BOLD}╚══════════════════════════════════════╝${C_RESET}"
+
+    while true; do
+        echo -en "${C_YELLOW}:: Okul Adını Giriniz: ${C_RESET}"
+        read -r raw_school
+        [ -n "$raw_school" ] && break
+        echo -e "${C_RED}Hata: Okul adı boş bırakılamaz!${C_RESET}"
+    done
+
+    school_formatted=$(echo "$raw_school" | tr ' ' '-' | tr '[:lower:]' '[:upper:]')
+
+    while true; do
+        echo -en "${C_YELLOW}:: Proje/Dosya Yolunu Giriniz: ${C_RESET}"
+        read -r raw_path
+        # eval KULLANMA (guvenlik)
+        expanded_path=$(realpath -m "$raw_path" 2>/dev/null || echo "$raw_path")
+        [ -e "$expanded_path" ] && break
+        echo -e "${C_RED}Hata: '$expanded_path' bulunamadı!${C_RESET}"
+    done
+
+    echo -e "\n${C_BLUE}:: Gönderim Bilgileri:${C_RESET}"
+    echo -e "   Okul Adı   : ${C_GREEN}${C_BOLD}$school_formatted${C_RESET}"
+    echo -e "   Proje Yolu : ${C_GREEN}$expanded_path${C_RESET}\n"
+
+    read -p ":: Projeyi göndermek istiyor musunuz? [E/h]: " confirm
+    confirm=${confirm:-E}
+    [[ ! "$confirm" =~ ^[Ee]$ ]] && { echo -e "${C_YELLOW}:: İptal edildi.${C_RESET}"; return 0; }
+
+    sync_repo
+    git -C "$INSTALL_DIR" config user.name "Xyronix Studios Bot" >/dev/null 2>&1
+    git -C "$INSTALL_DIR" config user.email "bot@xyronixstudios.internal" >/dev/null 2>&1
+
+    target_dir="$INSTALL_DIR/student-projects/$school_formatted"
+    mkdir -p "$target_dir"
+    echo -e "${C_CYAN}[JPS-${JPS_ARCH_BITS}] Proje dosyaları kopyalanıyor...${C_RESET}"
+    cp -r "$expanded_path" "$target_dir/" 2>/dev/null || cp -r "$expanded_path"* "$target_dir/"
+
+    cd "$INSTALL_DIR" || return 1
+    git add student-projects/"$school_formatted"
+
+    if git diff --staged --quiet; then
+        echo -e "${C_YELLOW}:: Bu proje zaten sunucuda mevcut.${C_RESET}"
+        return 0
+    fi
+
+    git commit -m "Proje Gönderimi: $school_formatted" >/dev/null 2>&1
+    if git push origin main; then
+        echo -e "${C_GREEN}${C_BOLD}\n[BAŞARILI] Projeniz 'student-projects/$school_formatted' klasörüne gönderildi!${C_RESET}"
+    else
+        echo -e "${C_RED}${C_BOLD}\n[HATA] Gönderim başarısız.${C_RESET}"
+    fi
+}
+
 case "${1:-help}" in
     update)      sync_repo ;;
+    submit)      submit_project ;;
     self-update) self_update "$JPS_BIN_NAME" ;;
     rollback)    self_rollback "$JPS_BIN_NAME" ;;
     install)     [ -z "${2:-}" ] && { echo -e "${C_RED}Paket adı gerekli.${C_RESET}"; exit 1; }; install_package "$2" ;;
     remove)      [ -z "${2:-}" ] && { echo -e "${C_RED}Paket adı gerekli.${C_RESET}"; exit 1; }; remove_package "$2" ;;
     search)      [ -z "${2:-}" ] && { echo -e "${C_RED}Arama kelimesi gerekli.${C_RESET}"; exit 1; }; search_packages "$2" ;;
     list)        list_packages ;;
-    info)        echo -e "${C_ORANGE}JPS-32 - Jubatus Package System${C_RESET}"; echo "Sürüm: $JPS_VERSION"; echo "Mimari: 32-bit"; echo "Dil: $JPS_LANG" ;;
+    info)        info_package ;;
     help|*)      show_help ;;
 esac

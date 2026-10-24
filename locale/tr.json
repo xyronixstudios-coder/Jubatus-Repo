@@ -51,6 +51,7 @@
     "arch_unsupported": "Desteklenmeyen mimari: %s",
     "package_list_title": "Mevcut paketler (%s-bit):",
     "search_title": "Arama: %s",
-    "lang_name": "Türkçe"
+    "lang_name": "Türkçe",
+    "help_submit": "submit            - Öğrenci projesi gönderir"
   }
 }
