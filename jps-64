@@ -21,7 +21,11 @@ source "$LIB_DIR/install.sh"
 
 C_RESET="\033[0m"; C_BOLD="\033[1m"; C_CYAN="\033[36m"
 C_GREEN="\033[32m"; C_YELLOW="\033[33m"; C_RED="\033[31m"
+C_ORANGE="\033[38;5;208m"; C_BLUE="\033[34m"
+C_BLUE="\033[34m"
+C_GREEN="\033[32m"; C_YELLOW="\033[33m"; C_RED="\033[31m"
 C_ORANGE="\033[38;5;208m"
+C_BLUE="\033[34m"
 
 REPO_URL="https://github.com/xyronixstudios-coder/Jubatus-Repo.git"
 INSTALL_DIR="/var/lib/jps-64"
@@ -168,7 +172,7 @@ submit_project() {
         echo -e "${C_RED}Hata: '$expanded_path' bulunamadı!${C_RESET}"
     done
 
-    echo -e "\n${C_BLUE}:: Gönderim Bilgileri:${C_RESET}"
+    echo -e "\n${C_CYAN}:: Gönderim Bilgileri:${C_RESET}"
     echo -e "   Okul Adı   : ${C_GREEN}${C_BOLD}$school_formatted${C_RESET}"
     echo -e "   Proje Yolu : ${C_GREEN}$expanded_path${C_RESET}\n"
 
@@ -194,6 +198,7 @@ submit_project() {
     fi
 
     git commit -m "Proje Gönderimi: $school_formatted" >/dev/null 2>&1
+    git -C "$INSTALL_DIR" remote set-url origin "https://github.com/xyronixstudios-coder/Jubatus-Repo.git" >/dev/null 2>&1 || true
     if git push origin main; then
         echo -e "${C_GREEN}${C_BOLD}\n[BAŞARILI] Projeniz 'student-projects/$school_formatted' klasörüne gönderildi!${C_RESET}"
     else
