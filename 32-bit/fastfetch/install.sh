@@ -3,7 +3,8 @@ set -euo pipefail
 export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:$PATH"
 
 FF_VERSION="2.69.0"
-FF_URL="https://github.com/fastfetch-cli/fastfetch/releases/download/${FF_VERSION}/fastfetch-linux-amd64.tar.gz"
+# 32-bit x86 icin i686
+FF_URL="https://github.com/fastfetch-cli/fastfetch/releases/download/${FF_VERSION}/fastfetch-linux-i686.tar.gz"
 
 TARGET="/usr/local/bin/fastfetch"
 REAL_BIN="/usr/local/bin/fastfetch.real"
@@ -16,7 +17,7 @@ if ! command -v curl >/dev/null 2>&1 && ! command -v wget >/dev/null 2>&1; then
     exit 1
 fi
 
-echo ":: Fastfetch ${FF_VERSION} indiriliyor..."
+echo ":: Fastfetch ${FF_VERSION} (i686/32-bit) indiriliyor..."
 TMP_DIR=$(mktemp -d)
 cd "$TMP_DIR"
 
@@ -28,7 +29,7 @@ fi
 
 tar -xzf ff.tar.gz
 
-# SADECE ELF binary sec (shell script degil!)
+# SADECE ELF binary sec
 FF_BIN=""
 while IFS= read -r f; do
     if file "$f" | grep -q "ELF"; then
@@ -39,7 +40,6 @@ done < <(find . -type f -name "fastfetch")
 
 if [ -z "$FF_BIN" ] || [ ! -f "$FF_BIN" ]; then
     echo "[HATA] fastfetch ELF binary bulunamadi." >&2
-    echo "Bulunan dosyalar:" >&2
     find . -type f -name "fastfetch*" -exec file {} \; >&2
     exit 1
 fi
@@ -69,5 +69,5 @@ exec /usr/local/bin/fastfetch.real --config /usr/local/share/jps/fastfetch/confi
 WRAPPER_EOF
 sudo chmod +x "$TARGET"
 
-echo "fastfetch (Jubatus temali) kuruldu: $TARGET"
+echo "fastfetch (Jubatus temali, 32-bit) kuruldu: $TARGET"
 echo "Surum kontrol: $($REAL_BIN --version 2>&1 | head -1)"
