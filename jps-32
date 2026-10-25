@@ -1095,7 +1095,16 @@ remove_package() {
 }
 
 list_packages() {
-    sync_repo >/dev/null 2>&1 || true
+    if [ -z "${INSTALL_DIR:-}" ] || [ ! -d "${INSTALL_DIR:-}" ]; then
+        echo "Repo not found, run 'jps update' first."
+        return 1
+    fi
+    local dir="${INSTALL_DIR}/${JPS_ARCH_BITS}-bit"
+    if [ ! -d "$dir" ]; then
+        echo "Package directory not found."
+        return 1
+    fi
+    echo -e "${C_ORANGE}${C_BOLD}$(msg package_list_title "$JPS_ARCH_BITS")${C_RESET}"
     for p in "$dir"/*/; do
         [ -d "$p" ] && basename "$p"
     done
@@ -1140,7 +1149,7 @@ info_package() {
     echo -e "${C_ORANGE}${C_BOLD}║  JPS-${JPS_ARCH_BITS} - Jubatus Package System${C_RESET}"
     echo -e "${C_ORANGE}${C_BOLD}╚══════════════════════════════════════╝${C_RESET}"
     echo ""
-    echo -e "${C_BOLD}Sürüm:${C_RESET}          $JPS_VERSION"
+    echo -e "${C_BOLD}Version:${C_RESET}          $JPS_VERSION"
     echo -e "${C_BOLD}Mimari:${C_RESET}         ${JPS_ARCH_BITS}-bit ($(uname -m))"
     echo -e "${C_BOLD}Dil:${C_RESET}            $JPS_LANG ($(msg lang_name 2>/dev/null || echo "$JPS_LANG"))"
     echo -e "${C_BOLD}Repo:${C_RESET}           $REPO_URL"
