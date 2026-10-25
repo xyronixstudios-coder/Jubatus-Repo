@@ -1,23 +1,394 @@
 #!/bin/bash
+# JPS-32 - Jubatus Package System (self-contained)
 set -euo pipefail
 
 JPS_VERSION="2.0.0"
 JPS_BIN_NAME="jps-32"
 JPS_ARCH_BITS="32"
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-if [ -f "$SCRIPT_DIR/lib/i18n.sh" ]; then
-    LIB_DIR="$SCRIPT_DIR/lib"
-elif [ -f "/usr/local/share/jps/lib/i18n.sh" ]; then
-    LIB_DIR="/usr/local/share/jps/lib"
-else
-    echo "JPS lib bulunamadı!" >&2; exit 1
+# ============ Gomulu: lib/i18n.sh ============
+#!/bin/bash
+# i18n yükleyici - JSON dil dosyalarını okur
+# Öncelik: JPS_LANG > LC_ALL > LC_MESSAGES > LANG > en
+# Örnek: LANG=tr_TR.UTF-8 -> "tr"
+
+# 1. Dil tespit et
+if [ -z "${JPS_LANG:-}" ]; then
+    # Sistem dilini al (LC_ALL > LC_MESSAGES > LANG sırası)
+    _sys_lang="${LC_ALL:-${LC_MESSAGES:-${LANG:-}}}"
+    
+    # "tr_TR.UTF-8" -> "tr", "en_US.UTF-8" -> "en"
+    _lang_code="${_sys_lang%%_*}"     # alt çizgiden önce
+    _lang_code="${_lang_code%%.*}"    # noktadan önce
+    _lang_code="${_lang_code%%@*}"    # @ işaretinden önce
+    
+    # Geçerli mi? (sadece harf, 2-3 karakter)
+    if [[ "$_lang_code" =~ ^[a-z]{2,3}$ ]]; then
+        JPS_LANG="$_lang_code"
+    else
+        JPS_LANG="en"
+    fi
 fi
 
-source "$LIB_DIR/i18n.sh"
-source "$LIB_DIR/progress.sh"
-source "$LIB_DIR/selfupdate.sh"
-source "$LIB_DIR/install.sh"
+# 2. Dil dosyası var mı? Yoksa en'e düş
+_jps_find_locale_dir() {
+    if [ -n "${JPS_LOCALE_DIR:-}" ] && [ -d "$JPS_LOCALE_DIR" ]; then
+        echo "$JPS_LOCALE_DIR"; return
+    fi
+    local script_dir
+    script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+    if [ -d "$script_dir/locale" ]; then
+        echo "$script_dir/locale"; return
+    fi
+    if [ -d "/usr/local/share/jps/locale" ]; then
+        echo "/usr/local/share/jps/locale"; return
+    fi
+    echo ""
+}
+
+JPS_LOCALE_DIR="$(_jps_find_locale_dir)"
+
+# Dil dosyası yoksa ingilizceye düş
+if [ ! -f "$JPS_LOCALE_DIR/$JPS_LANG.json" ]; then
+    if [ "$JPS_LANG" != "en" ]; then
+        # Sessizce en'e düş (kullanıcıya uyarı verme)
+        JPS_LANG="en"
+    fi
+fi
+
+# 3. JSON'dan mesaj oku
+_load_json_msg() {
+    local key="$1"
+    local file="$JPS_LOCALE_DIR/$JPS_LANG.json"
+    [ -f "$file" ] || file="$JPS_LOCALE_DIR/en.json"
+    [ -f "$file" ] || { echo "$key"; return; }
+
+    if command -v jq >/dev/null 2>&1; then
+        jq -r --arg k "$key" '.msg[$k] // $k' "$file" 2>/dev/null
+    else
+        sed -n "s/.*\"$key\"[[:space:]]*:[[:space:]]*\"\\(.*\\)\".*/\\1/p" "$file" | head -1
+    fi
+}
+
+msg() {
+    local key="$1"
+    shift
+    local template
+    template=$(_load_json_msg "$key")
+    if [ $# -gt 0 ]; then
+        printf "$template" "$@"
+    else
+        printf "%s" "$template"
+    fi
+}
+
+# ============ Gomulu: lib/progress.sh ============
+#!/bin/bash
+# JPS Progress Bar - kendi çizen, git çıktısı göstermeyen
+
+_C_RESET="\033[0m"
+_C_BOLD="\033[1m"
+_C_CYAN="\033[36m"
+_C_GREEN="\033[32m"
+_C_YELLOW="\033[33m"
+_C_RED="\033[31m"
+_C_ORANGE="\033[38;5;208m"
+
+_PROGRESS_ACTIVE=0
+_PROGRESS_LABEL=""
+_PROGRESS_PCT=0
+
+progress_start() {
+    _PROGRESS_LABEL="$1"
+    _PROGRESS_PCT=0
+    _PROGRESS_ACTIVE=1
+    _progress_draw
+}
+
+progress_set() {
+    [ "$_PROGRESS_ACTIVE" -eq 0 ] && return
+    local pct="$1"
+    [ "$pct" -lt 0 ] && pct=0
+    [ "$pct" -gt 100 ] && pct=100
+    _PROGRESS_PCT="$pct"
+    _progress_draw
+}
+
+_progress_draw() {
+    local width=30
+    local filled=$(( _PROGRESS_PCT * width / 100 ))
+    local empty=$(( width - filled ))
+    local bar=""
+    local i
+    for ((i=0; i<filled; i++)); do bar+="█"; done
+    for ((i=0; i<empty; i++)); do bar+="░"; done
+    printf "\r\033[K  ${_C_ORANGE}⠿${_C_RESET} %-20s [${_C_ORANGE}%s${_C_RESET}] %3d%%" "$_PROGRESS_LABEL" "$bar" "$_PROGRESS_PCT"
+}
+
+progress_done() {
+    [ "$_PROGRESS_ACTIVE" -eq 0 ] && return
+    _PROGRESS_ACTIVE=0
+    _PROGRESS_PCT=100
+    _progress_draw
+    printf "\r\033[K"
+    echo -e "  ${_C_GREEN}✓${_C_RESET} ${_C_GREEN}${_C_BOLD}${_PROGRESS_LABEL}${_C_RESET}"
+}
+
+progress_fail() {
+    [ "$_PROGRESS_ACTIVE" -eq 0 ] && return
+    _PROGRESS_ACTIVE=0
+    printf "\r\033[K"
+    echo -e "  ${_C_RED}✗${_C_RESET} ${_C_RED}${_C_BOLD}${_PROGRESS_LABEL}${_C_RESET}"
+}
+
+# ============ Gomulu: lib/selfupdate.sh ============
+#!/bin/bash
+# JPS Self-Update - güvenli, atomik, rollback'li
+# $1 = binary adı (jps-64 veya jps-32)
+
+JPS_RAW_BASE="https://raw.githubusercontent.com/xyronixstudios-coder/Jubatus-Repo/main"
+JPS_BACKUP_DIR="/var/lib/jps/backups"
+
+self_update() {
+    local bin_name="${1:?binary name required}"
+    local target_bin
+    target_bin=$(command -v "$bin_name" 2>/dev/null || echo "/usr/local/bin/$bin_name")
+    local tmp_dir
+    tmp_dir=$(mktemp -d "/tmp/jps-update.XXXXXX") || return 1
+
+    echo -e "${_C_CYAN}$(msg update_check)${_C_RESET}"
+
+    # 1. Uzak sürümü çek (VERSION dosyasından)
+    local remote_ver
+    remote_ver=$(curl -fsSL --retry 3 --proto '=https' \
+        "$JPS_RAW_BASE/VERSION?v=$(date +%s)" 2>/dev/null | tr -d '[:space:]')
+
+    if [ -z "$remote_ver" ]; then
+        echo -e "${_C_YELLOW}$(msg update_latest "$JPS_VERSION")${_C_RESET}"
+        rm -rf "$tmp_dir"
+        return 0
+    fi
+
+    if [ "$remote_ver" = "$JPS_VERSION" ]; then
+        echo -e "${_C_GREEN}$(msg update_latest "$JPS_VERSION")${_C_RESET}"
+        rm -rf "$tmp_dir"
+        return 0
+    fi
+
+    echo -e "${_C_YELLOW}$(msg update_available "$JPS_VERSION" "$remote_ver")${_C_RESET}"
+    read -r -p "$(msg update_prompt)" ans
+    ans=${ans:-E}
+    if [[ ! "$ans" =~ ^[EeYy]$ ]]; then
+        echo -e "${_C_YELLOW}$(msg update_cancel)${_C_RESET}"
+        rm -rf "$tmp_dir"
+        return 0
+    fi
+
+    # 2. Yeni script'i indir
+    local tmp_script="$tmp_dir/$bin_name.new"
+    progress_start "$(msg progress_download)"
+    if ! curl -fsSL --retry 3 --proto '=https' \
+        "$JPS_RAW_BASE/$bin_name?v=$(date +%s)" -o "$tmp_script"; then
+        progress_fail
+        echo -e "${_C_RED}Download failed.${_C_RESET}"
+        rm -rf "$tmp_dir"
+        return 1
+    fi
+    progress_set 100
+    progress_done
+
+    # 3. SHA256 doğrula
+    progress_start "$(msg progress_verify)"
+    local expected_hash
+    expected_hash=$(curl -fsSL --retry 3 --proto '=https' \
+        "$JPS_RAW_BASE/CHECKSUMS?v=$(date +%s)" 2>/dev/null \
+        | grep -E " $bin_name\$" | awk '{print $1}')
+
+    if [ -n "$expected_hash" ]; then
+        local actual_hash
+        actual_hash=$(sha256sum "$tmp_script" | awk '{print $1}')
+        if [ "$expected_hash" != "$actual_hash" ]; then
+            progress_fail
+            echo -e "${_C_RED}$(msg update_verify_fail)${_C_RESET}"
+            rm -rf "$tmp_dir"
+            return 1
+        fi
+    fi
+    progress_set 100
+    progress_done
+
+    # 4. Yedek al
+    sudo mkdir -p "$JPS_BACKUP_DIR"
+    if [ -f "$target_bin" ]; then
+        sudo cp -a "$target_bin" "$JPS_BACKUP_DIR/$bin_name.$(date +%s).bak"
+    fi
+
+    # 5. Atomik değiştir
+    progress_start "$(msg progress_install)"
+    chmod +x "$tmp_script"
+    if sudo mv -f "$tmp_script" "$target_bin"; then
+        progress_set 100
+        progress_done
+        echo -e "${_C_GREEN}${_C_BOLD}$(msg update_ok)${_C_RESET}"
+        rm -rf "$tmp_dir"
+        return 0
+    else
+        progress_fail
+        rm -rf "$tmp_dir"
+        return 1
+    fi
+}
+
+self_rollback() {
+    local bin_name="${1:?binary name required}"
+    local target_bin
+    target_bin=$(command -v "$bin_name" 2>/dev/null || echo "/usr/local/bin/$bin_name")
+    local latest_bak
+    latest_bak=$(ls -t "$JPS_BACKUP_DIR"/"$bin_name".*.bak 2>/dev/null | head -1)
+    if [ -z "$latest_bak" ]; then
+        echo -e "${_C_RED}No backup found.${_C_RESET}"
+        return 1
+    fi
+    sudo cp -a "$latest_bak" "$target_bin"
+    echo -e "${_C_GREEN}$(msg update_rollback_ok)${_C_RESET}"
+}
+
+# ============ Gomulu: lib/install.sh ============
+#!/bin/bash
+# JPS install fonksiyonlari (i18n'li, bagimlilik kuran)
+
+# Dagitim algila ve paket kur
+_jps_pkg_install() {
+    local pkgs=("$@")
+    [ ${#pkgs[@]} -eq 0 ] && return 0
+
+    if command -v apt-get >/dev/null 2>&1; then
+        sudo apt-get update -qq >/dev/null 2>&1 || true
+        sudo apt-get install -y "${pkgs[@]}" >/dev/null 2>&1
+    elif command -v pacman >/dev/null 2>&1; then
+        sudo pacman -S --noconfirm --needed "${pkgs[@]}" >/dev/null 2>&1
+    elif command -v dnf >/dev/null 2>&1; then
+        sudo dnf install -y "${pkgs[@]}" >/dev/null 2>&1
+    elif command -v zypper >/dev/null 2>&1; then
+        sudo zypper --non-interactive install "${pkgs[@]}" >/dev/null 2>&1
+    elif command -v xbps-install >/dev/null 2>&1; then
+        sudo xbps-install -y "${pkgs[@]}" >/dev/null 2>&1
+    elif command -v apk >/dev/null 2>&1; then
+        sudo apk add --no-cache "${pkgs[@]}" >/dev/null 2>&1
+    else
+        return 1
+    fi
+}
+
+# Bagimlilik adini dagitima gore cevir
+_jps_dep_to_pkg() {
+    local dep="$1"
+    # pip3 -> python3-pip, go -> golang, make -> make (bazen build-essential)
+    case "$dep" in
+        pip3|pip)  echo "python3-pip" ;;
+        python3)   echo "python3" ;;
+        go)        echo "golang" ;;
+        make)      echo "make" ;;
+        gcc)       echo "gcc" ;;
+        git)       echo "git" ;;
+        curl)      echo "curl" ;;
+        tar)       echo "tar" ;;
+        bzip2)     echo "bzip2" ;;
+        jq)        echo "jq" ;;
+        *)         echo "$dep" ;;
+    esac
+}
+
+install_package() {
+    local pkg="$1"
+    echo -e "${C_ORANGE}${C_BOLD}╔══════════════════════════════════════╗${C_RESET}"
+    echo -e "${C_ORANGE}${C_BOLD}║  $(msg pkg_install_header "$JPS_ARCH_BITS" "$pkg")${C_RESET}"
+    echo -e "${C_ORANGE}${C_BOLD}╚══════════════════════════════════════╝${C_RESET}"
+
+    # [1/3] Depo
+    progress_start "$(msg repo_sync_start)"
+    sync_repo >/dev/null 2>&1
+    progress_set 100
+    progress_done
+
+    # [2/3] Paket ara
+    progress_start "$(msg pkg_search "$pkg")"
+    local pkg_path="$INSTALL_DIR/${JPS_ARCH_BITS}-bit/$pkg"
+    if [ ! -d "$pkg_path" ]; then
+        progress_fail
+        echo -e "${C_RED}$(msg pkg_not_found "$pkg" "${JPS_ARCH_BITS}-bit")${C_RESET}"
+        return 1
+    fi
+    progress_set 100
+    progress_done
+
+    # [3/3] Bagimliliklar (EKSIKSE KUR)
+    echo -e "${C_CYAN}:: $(msg deps_checking)${C_RESET}"
+    if [ -f "$pkg_path/depends.txt" ]; then
+        local missing_pkgs=()
+        while IFS= read -r dep; do
+            [ -z "$dep" ] && continue
+            if command -v "$dep" >/dev/null 2>&1; then
+                printf "${C_GREEN}$(msg dep_ok '%s')${C_RESET}\n" "$dep"
+            else
+                printf "${C_YELLOW}$(msg dep_missing '%s')${C_RESET}\n" "$dep"
+                missing_pkgs+=("$(_jps_dep_to_pkg "$dep")")
+            fi
+        done < "$pkg_path/depends.txt"
+
+        if [ ${#missing_pkgs[@]} -gt 0 ]; then
+            echo -e "${C_CYAN}:: Eksik bagimliliklar kuruluyor: ${missing_pkgs[*]}${C_RESET}"
+            if _jps_pkg_install "${missing_pkgs[@]}"; then
+                echo -e "${C_GREEN}  ✓ Bagimliliklar kuruldu${C_RESET}"
+            else
+                echo -e "${C_RED}  ✗ Bagimliliklar kurulamadi (paket yoneticisi bulunamadi)${C_RESET}"
+                echo -e "${C_YELLOW}  ! Devam ediliyor, install.sh kendi kontrolunu yapacak${C_RESET}"
+            fi
+        fi
+    fi
+
+    # Kurulum
+    local log_file
+    log_file=$(mktemp "/tmp/jps-install-${pkg}.XXXXXX.log")
+
+    progress_start "$(msg progress_install) $pkg"
+
+    ( cd "$pkg_path" && sudo bash install.sh ) > "$log_file" 2>&1 &
+    local install_pid=$!
+
+    local pct=0
+    while kill -0 "$install_pid" 2>/dev/null; do
+        sleep 0.5
+        if [ $pct -lt 95 ]; then
+            pct=$((pct + 3))
+            [ $pct -gt 95 ] && pct=95
+            progress_set "$pct"
+        fi
+    done
+
+    wait "$install_pid"
+    local rc=$?
+
+    if [ $rc -ne 0 ]; then
+        progress_fail
+        echo -e "${C_RED}$(msg pkg_install_fail "$pkg")${C_RESET}"
+        echo -e "${C_YELLOW}:: Hata logu: $log_file${C_RESET}"
+        tail -20 "$log_file" | sed 's/^/  /'
+        return 1
+    fi
+
+    progress_set 100
+    progress_done
+    rm -f "$log_file"
+    echo -e "${C_GREEN}${C_BOLD}$(msg pkg_install_ok "$pkg")${C_RESET}"
+}
+
+# ============ JPS-32 ana kod ============
+
+#!/bin/bash
+set -euo pipefail
+
+
 
 C_RESET="\033[0m"; C_BOLD="\033[1m"; C_CYAN="\033[36m"
 C_GREEN="\033[32m"; C_YELLOW="\033[33m"; C_RED="\033[31m"
